@@ -153,16 +153,16 @@ disqus:
     username: pigpdong
 # https://imsun.net/posts/gitment-introduction/
 gitment:
-    owner: ityouknow
+    owner: pigpdong
     repo: blog-comments
     oauth:
-        client_id: 61bfc53d957e74e78f8f
+        client_id: 2fe4a8bdbcc9b29fd9ec
         client_secret: 31c61e66cdcc9ada8db2267ee779d0bdafac434c
 # https://github.com/gitalk/gitalk#install
 gitalk:
-    owner: ityouknow
-    repo: blog-comments
-    clientID: 61bfc53d957e74e78f8f
-    clientSecret: 31c61e66cdcc9ada8db2267ee779d0bdafac434c
+    owner: pigpdong
+    repo: pigpdong.github.io
+    clientID: 2fe4a8bdbcc9b29fd9ec
+    clientSecret: 9fbbf22370770b5079b253ee65987e882f7b1bf4
 # 在使用其它评论组件时可点击显示 Disqus
 lazy_load_disqus : true
