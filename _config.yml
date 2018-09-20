@@ -161,8 +161,8 @@ gitment:
 # https://github.com/gitalk/gitalk#install
 gitalk:
     owner: pigpdong
-    repo: pigpdong.github.io
-    clientID: 2fe4a8bdbcc9b29fd9ec
-    clientSecret: 9fbbf22370770b5079b253ee65987e882f7b1bf4
+    repo: blog-commend
+    clientID: cf494d3020d28d4739ac
+    clientSecret: ef5a84dd41388289ad8dc669933d7518fe83437b
 # 在使用其它评论组件时可点击显示 Disqus
 lazy_load_disqus : true
