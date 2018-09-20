@@ -35,7 +35,6 @@ permalink: /link
 - [htmlToMD工具](http://relatos.top/2md/) - 在线将页面转发为markdown工具  
 - [云收藏](http://www.favorites.ren/) - 一个在线云端的网络收藏夹，可以分享和查看其它人分享
 - [wherebt](http://wherebt.com/) - 提供各种BT资源导航,主要收录了bt sync keys的分享网站
-- [公众号编辑器](http://md.ityouknow.com/) - 可以以优雅的方式在微信公众号去发布markdown文章
 - [技术博客联盟](http://techblog.pub/) - 原创技术博客作者交流的地方
 
 
@@ -50,10 +49,4 @@ permalink: /link
 - [51CTO](http://blog.51cto.com/ityouknow) - 51Cto地址，虽然一直没有用过
 
 ## 其它  
-
-*需要展示你的网站，就在本页下面留言吧，也算是一种宣传方式。格式要求如下：*
-
-- 网站名称：ityouknow  
-- 网站链接：http://www.ityouknow.com  
-- 网站描述：neo 的个人博客，分享技术，分享生活  
 

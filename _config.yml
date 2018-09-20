@@ -11,13 +11,12 @@ subtitle: 分享技术，品味人生
 name: 小强
 email: xiaoqiang@tongbanjie.com
 description: 本站是纯洁的微笑的技术分享博客。内容涵盖生活故事、Java后端技术、Spring Boot、Spring Cloud、微服务架构、大数据演进、高可用架构、中间件使用、系统监控等相关的研究与知识分享。
-keywords: ityouknow,纯洁的微笑,Spring,Spring Boot,Spring Cloud,MongoDB,Jvm,Docker,生活故事,架构,大数据,一线,FastDFS,开发者,编程,代码,开源,IT网站,Developer,Programmer,Coder,Geek,IT技术博客,Java,Python,
+keywords: 小强,Spring,Spring Boot,Spring Cloud,MongoDB,Jvm,Docker,生活故事,架构,大数据,开发者,编程,代码,开源,IT网站,Developer,Programmer,Coder,Geek,IT技术博客,Java,Python,
 encoding: "utf-8"
 favicon: favicon.png 
 
-repository: ityouknow/ityouknow.github.io
+repository: pigpdong/pigpdong.github.io
 github_url: https://github.com/pigpdong
-cnblog_url: http://www.cnblogs.com/ityouknow
 url: https://pigpdong.github.io
 
 ## Gem
@@ -61,20 +60,20 @@ navs:
     label: Home
 
   -
-    href: /spring-boot.html
-    label: Spring-Boot
+    href: /spring.html
+    label: Spring
 
   -
-    href: /spring-cloud.html
-    label: Spring-Cloud
+    href: /java.html
+    label: java核心
 
   -
     href: /archives.html
-    label: Archives
+    label: 架构
 
   -
     href: /link.html
-    label: Link
+    label: 算法
 
   -
     href: /about.html
@@ -100,28 +99,13 @@ labels:
     href: /jvm.html
     name: Jvm
 
-  -
-    href: /fastdfs.html
-    name: FastDFS
-
-  -
-    href: /mongodb.html
-    name: MongoDB
-
-  -
-    href: /docker.html
-    name: Docker
-
-  -
-    href: /open-source.html
-    name: Code   
 
 # selected articles
 classes:
 
   -
     href: /life.html
-    name: 我的故事
+    name: 总结系列
     describe: 生活就是故事，故事就是生活
 
   -
@@ -166,7 +150,7 @@ comments_provider: gitalk
 # !!!Important!!! Please modify infos below to yours
 # https://disqus.com
 disqus:
-    username: ityouknow
+    username: pigpdong
 # https://imsun.net/posts/gitment-introduction/
 gitment:
     owner: ityouknow
