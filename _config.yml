@@ -13,7 +13,7 @@ email: xiaoqiang@tongbanjie.com
 description: 本站是纯洁的微笑的技术分享博客。内容涵盖生活故事、Java后端技术、Spring Boot、Spring Cloud、微服务架构、大数据演进、高可用架构、中间件使用、系统监控等相关的研究与知识分享。
 keywords: 小强,Spring,Spring Boot,Spring Cloud,MongoDB,Jvm,Docker,生活故事,架构,大数据,开发者,编程,代码,开源,IT网站,Developer,Programmer,Coder,Geek,IT技术博客,Java,Python,
 encoding: "utf-8"
-favicon: favicon.png 
+favicon: favicon.ico
 
 repository: pigpdong/pigpdong.github.io
 github_url: https://github.com/pigpdong
@@ -61,19 +61,19 @@ navs:
 
   -
     href: /spring.html
-    label: Spring
+    label: DB
 
   -
     href: /java.html
-    label: java核心
+    label: JAVA
 
   -
     href: /archives.html
-    label: 架构
+    label: ARCH
 
   -
     href: /link.html
-    label: 算法
+    label: ALGO
 
   -
     href: /about.html
@@ -82,10 +82,6 @@ navs:
 
 # labels. my blog key words
 labels:
-
-  -
-    href: /share/2017/10/01/resource-sharing.html
-    name: 资源
 
   -
     href: /life.html
@@ -152,12 +148,6 @@ comments_provider: gitalk
 disqus:
     username: pigpdong
 # https://imsun.net/posts/gitment-introduction/
-gitment:
-    owner: pigpdong
-    repo: blog-comments
-    oauth:
-        client_id: 2fe4a8bdbcc9b29fd9ec
-        client_secret: 31c61e66cdcc9ada8db2267ee779d0bdafac434c
 # https://github.com/gitalk/gitalk#install
 gitalk:
     owner: pigpdong
