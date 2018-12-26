@@ -16,19 +16,19 @@ excerpt: 注册中心的几种模式,路由和负载均衡
 
 集中代理模式一般是在服务调用方和服务提供方之间部署一套独立的代理系统来接收调用方的请求，然后配合域名系统和特定的负载均衡策略以及路由算法，转发到对应的服务提供方，这个代理系统一般由硬件F5设备加7层软件负载nginx配合域名系统来使用，这种模式，有集中治理，运维简单，而且和语言栈无关的优点，但是目前这个代理系统存在单点问题，而且配置比较麻烦，由于服务调用者没有之间调用服务提供方，所以网络上存在多一跳的开销，目前国内主要有携程等公司在使用
 
-![](https://pigpdong.github.io/assets/images/2019/register/register1.png)
+![](https://pigpdong.github.io/assets/images/2019/register/register1.jpeg)
 
 ### 客户端嵌入式代理
 
 目前很多公司用springcloud或者dubbo作为rpc框架的公司多选择这种模式，在客户端嵌入一个程序做服务发现和软件负载均衡，调用方会缓存服务提供方的地址列表，并且自己根据路由算法和负载均衡策略选择服务提供者进行调用，这种模式需要一个第三方的注册中心配合，服务提供者启动的时候将服务注册到注册中心，服务调用方去注册中心获取服务提供者信息，这种模式有无单点问题，性能好的优点，但是由于客户端需要关心负载均衡和维护提供者列表，导致客户端臃肿，目前国内主要有阿里的dubbo和新浪的Motan
 
-![](https://pigpdong.github.io/assets/images/2019/register/register2.png)
+![](https://pigpdong.github.io/assets/images/2019/register/register2.jpeg)
 
 ### 主机独立进程代理
 
 这种模式是前面两种模式的一个折中，将这个代理放到主机的一个独立程序上，所有这个主机上的应用共享这个代理，应用一般部署在docker容器中，主机可以是一个物理机也可以是虚拟机。在这个代理上进行路由和负载均衡，这个模式也需要一个模式二中独立的注册中心来辅助代理程序做服务发现，这种模式兼具上面两种模式的优点，但是运维较复杂，目前国内只有唯品会有这种模式的探索
 
-![](https://pigpdong.github.io/assets/images/2019/register/register3.png)
+![](https://pigpdong.github.io/assets/images/2019/register/register3.jpeg)
 
 
 ### servicemesh介绍
