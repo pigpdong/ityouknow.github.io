@@ -88,10 +88,83 @@ zookeeper需要和所有的服务保持长连接,而随着服务的频繁发布,
 
 ### 几个注册中心的对比
 
-etcd
-eureka
-zookeeper
-consule
+
+<table>
+  <tr>
+    <th>指标</th>
+    <th>Consule</th>
+    <th>zookeeper</th>
+    <th>etcd</th>
+    <th>eureka</th>
+  </tr>
+  <tr>
+           <td>服务监控检测</td>
+           <td>服务状态,内存,硬盘</td>
+           <td>长连接keepalived</td>
+           <td>连接心跳</td>
+           <td>需要配置</td>
+  </tr>
+  <tr>
+         <td>多数据中心</td>
+         <td>支持</td>
+         <td>不支持</td>
+         <td>不支持</td>
+         <td>不支持</td>
+  </tr>
+   <tr>
+           <td>KV存储</td>
+           <td>支持</td>
+           <td>支持</td>
+           <td>支持</td>
+           <td>不支持</td>
+    </tr>
+     <tr>
+             <td>一致性</td>
+             <td>gossip</td>
+             <td>paxos</td>
+             <td>raft</td>
+             <td>无</td>
+      </tr>
+       <tr>
+               <td>CAP</td>
+               <td>CA</td>
+               <td>CP</td>
+               <td>CP</td>
+               <td>AP</td>
+        </tr>
+        <tr><td>使用接口(多语言能力)</td>
+        <td>支持http和dns</td>
+        <td>客户端</td>
+        <td>http/grpc</td>
+        <td>http（sidecar）</td>
+        </tr>
+        <tr>
+        <td>watch支持</td>
+        <td>全量/支持long polling</td>
+        <td>支持</td>
+        <td>支持 long polling</td>
+        <td>支持 long polling/大部分增量</td>
+        </tr>
+        <tr><td>自身监控</td>
+        <td>metrics</td>
+        <td>—</td>
+        <td>metrics</td>
+        <td>metrics</td>
+        </tr>
+        <tr><td>安全</td>
+        <td>acl /https</td>
+        <td>acl</td>
+        <td>https支持（弱）</td>
+        <td>—</td>
+        </tr>
+        <tr><td>spring cloud集成</td>
+        <td>已支持</td>
+        <td>已支持</td>
+        <td>已支持</td>
+        <td>已支持</td>
+        </tr>
+</table>
+
 
 
 
