@@ -21,6 +21,8 @@ excerpt: ACID MVCC
 
 ## TCC
 
+## FESCAR
+
 ## 一致性协议 raft
 
 1.通过选举保证集群中只有一个leader,只有leader对外提供写服务，leader将日志广播给follower,每一条日志都按顺序维护在一个队列里，所有节点的队列里有一个index来控制前面的是已经提交的，后面的是没提交的，提交代表已经有超过半数的节点应答，leader先把日志复制给所有follower，在收到半数节点应答后在通知follower,index位置来控制那些日志是已经提交的，只有提交过的日志，follower才会提供给应用方使用
