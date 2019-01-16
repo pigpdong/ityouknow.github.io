@@ -47,8 +47,28 @@ basic avalilablity,基本可用意味着系统可以出现短暂的不可用,后
 
 该协议比较简单,我们对照下图进行理解,就不在具体分析过程了.
 
+![](https://pigpdong.github.io/assets/images/2019/distransaction/2pc.png)
+
+两阶段提交有以下缺点
+
+- 1.单点故障 一旦协调者发生故障,那么事物的其他参与者会一直阻塞下去,尤其在第二阶段,由于一阶段已经将资源锁定,协调者可以设计为分布式集群部署,当master节点宕机,可以重新选举一个master,但是协调者就需要将参与者的返回结果状态进行持久化,并且和其他协调者进行同步,这个过程又会涉及新的一致性问题.
+
+- 2.同步阻塞问题,阻塞周期长,当第一个参与者锁定资源后需要等到阶段2提交后才会释放资源
+
+- 3.可能出现数据不一致,当协调者发出commit后,某一个参与者由于网络原因没有收到,而其他参与者已经commit,于是出现数据不一致
+
+> 基于两阶段提交的缺陷,后来提出了三阶段提交的方案,就是在2pc的基础上增加了一个CanCommit的询问动作,这一步可以保证后续的commit操作大概率会成功,例如从用户账户扣50块钱,而canCommit询问的时候发现账户只有40,就会直接返回不可以提交,提高成功率,同时减少了锁定资源的时间,但是3PC并没有解决2PC的问题
+当然三阶段也设置了超时时间,二阶段只有协调中的请求会有超时时间.
 
 
+## XA
+
+X/OPEN 组织定义了一套分布式事物处理模型,也就是Distributed Trasaction Processing Reference Model 简称DTP模型,并定义了两套协议,分别是XA,TX
+
+
+![](https://pigpdong.github.io/assets/images/2019/distransaction/dtp.png)
+
+从上图可以看出,DTP使用了两阶段提交协议,并提出了RM,AP,TM的概念,目前mysql的innodb有对XA的支持,spring也封装了XA相关的接口,但是XA存在两阶段提交相关问题,所以目前在互联网公司高并发的场景下并没有太普及.
 
 
 ## 业务补偿
@@ -79,27 +99,85 @@ basic avalilablity,基本可用意味着系统可以出现短暂的不可用,后
 
 ## TCC
 
+TCC是(Try Commit Cancel)的简称,源于国外的一篇论文,最早由阿里的程立博士在infoQ的一篇介绍中引入国内,目前国内大多数互联网公司都在采用这种方案.
 
-## 一致性消息
+我们用一个账户A转账给账户B100元为例子
+
+- Try  预留资源,完成一致性检查 (账户A可用余额减少100,冻结金额增加100元,账户B冻结金额增加100)
+- Commit 执行业务,不做任何一致性检查,而且只能使用try中预留的资源 (账户A冻结金额减少100,账户B可用余额增加100,冻结金额减少100)
+- Cancel 释放TRY阶段预留的资源 (账户A可用余额增加100,冻结金额减少100,账户B冻结金额减少100)
+
+![](https://pigpdong.github.io/assets/images/2019/distransaction/tccxa.jpg)
+
+TCC模式本质上也是两阶段提交,上图对比了TCC和XA方案,两者一个是业务操作一个是针对数据库,所以TCC方案不会采用数据库本地事物去锁定资源,实际上TCC是业务补偿的一个变种,所以使用TCC也需要各个接口能够支持幂等,并且能够重试,而且需要提供状态查询接口,不然在网络超时后,发起方不确定分支事物是执行成功还是失败.
+
+
+## 可靠消息最终一致性
+
+大多时候我们希望多个业务能够并行处理,这个时候我们可以借助消息队列来异步通知其他应用进行相应的操作,那么怎么保证本地事物和接受消息的应用上处理的服务要么全部成功,要么全部失败呢,我们根据之前的最终一致性方案,允许两个分支事物可以先后执行,但是最终肯定会执行,不会不执行.
+
+这种方案其实也是业务补偿的一种,只是借助消息队列进行解耦和异步通知,下面我们分析下这种方案的两个难点.
+
+- 如何保证消息投递和本地事物要么全部成功,要么全部失败
+首先,事物管理器先发送一条记录给消息服务,消息服务将这条消息存储,状态记录为待确认,然后执行本地数据库操作,然后发送确认消息给消息服务,这两个动作可以放在一个本地事物内,如果本地数据库操作成功,消息确认失败,就将本地数据库操作回滚,如果本地数据库操作失败就发消息给消息服务请求删除消息.
+如果发送给消息服务的确认和删除由于网络没有回应,那么就需要把在消息服务里定时轮询消息的状态,之后将结果同步给应用
+
+- 如何保证消息百分百会被消费
+消费端消费完消息后,给个确认消息给消息服务,消息服务不停轮询当前消息列表中,查看是否存在没有消费完成的消息,如果存在就让消息队列重新通知一次.
+
+- 如何保证消息不会重复消费
+
+原则上我们希望分支事物自己能够支持幂等,如果一定要让中间件去重,实际上消息队列去重的代价是很大的,会牺牲掉高可用性,我们可以在应用层维护一张表去存储已经处理的消息,这样可以根据消息ID去重.
 
 ## FESCAR
 
+FESCAR (Fast easy commit and rollback),是阿里GTS的社区开源版本,基于现有的分布式事物解决方案,要么像XA这种会有严重的性能问题,要么像业务补偿这种需要根据业务场景在应用中进行定制,我们不希望引入微服务后给业务层带来额外的研发负担,另外一方面不希望引入分布式事物后拖慢业务,所以FesCar的初衷就是对业务0侵入,高性能.
+
+下面我们分析下Fescar的实现,在此之前,我们回顾下XA方案下,分布式事物处理的流程.
+
+- 1.TM向TC申请开启一个全局事物,全局事物创建成功,并返回一个唯一的XID
+- 2.XID在微服务调用链路中进行传递
+- 3.RM向TC注册分支事物,将其纳入XID对应的全局事物管理中
+- 4.TM向TC发起针对XID的全局事物的提交或者回滚操作
+- 5.TC调用XID管辖下的分支事物完成提交和回滚
+
+![](https://pigpdong.github.io/assets/images/2019/distransaction/fescarflow.png)
+
+可以看出FESCAR将RM提到应用层,作为一个二方包部署在应用程序侧,不依赖数据库.
+
+另外FESCAR取消了数据库层的prepare操作,而是直接进行commit操作,这样就不会带来昂贵的锁开销,而每一个commit操作对应的都是数据库的本地事物,这个改变是Fescar性能高德主要原因,同时也使他牺牲了隔离性,导致目前Fescar只能支持读未提交的隔离级别,如果要实现读已提交需要应用层做定制.
+
+
+![](https://pigpdong.github.io/assets/images/2019/distransaction/xa.png)
+
+![](https://pigpdong.github.io/assets/images/2019/distransaction/fescar.png)
+
+
+Fescar的RM插件,重新实现了一遍JDBC,从而拦截掉数据库的sql进行解析,并生成undolog,以及事物提交后的增强处理,这种设计使应用方完全无感,只需要开启一个全局事物
+
+![](https://pigpdong.github.io/assets/images/2019/distransaction/fescarjdbc.png)
+
+undolog是存储在业务方本地的数据库实例里,这样业务更新和插入undolog在一个本地事物内,可以保证事物回滚的时候一定有undolog.
+
+![](https://pigpdong.github.io/assets/images/2019/distransaction/fescararch.png)
+
+目前fescar刚开源,在可靠性上还需要验证,目前社区也在计划完善一些新功能.
+
+
 ## 一致性协议 raft
 
-1.通过选举保证集群中只有一个leader,只有leader对外提供写服务，leader将日志广播给follower,每一条日志都按顺序维护在一个队列里，所有节点的队列里有一个index来控制前面的是已经提交的，后面的是没提交的，提交代表已经有超过半数的节点应答，leader先把日志复制给所有follower，在收到半数节点应答后在通知follower,index位置来控制那些日志是已经提交的，只有提交过的日志，follower才会提供给应用方使用
+由于paxos算法太复杂,我们分析下raft协议是如何保证分布式集群下数据复制的一致性的.
 
-2、选举过程，当一个leader长时间没有应答时，所有的follower都可以成为candidate，向其他follower节点发送投票请求，如果超过半数follower节点应答后这个candidate就会升级为leader,为了避免所有的follower节点已经作为candidate发起投票，引入随机超时机制，每个follower和leader的超时时间在一定范围内随机，当candidate发起投票没有结果时，随机等待一定时间。
+- 1.通过选举保证集群中只有一个leader,只有leader对外提供写服务，leader将日志广播给follower,每一条日志都按顺序维护在一个队列里，所有节点的队列里有一个index来控制前面的是已经提交的，后面的是没提交的，提交代表已经有超过半数的节点应答，leader先把日志复制给所有follower，在收到半数节点应答后在通知follower,index位置来控制那些日志是已经提交的，只有提交过的日志，follower才会提供给应用方使用
 
-3.candidate的日志长度要大于等于半数follower节点的日志才能成为leader,所以发起投票的时候如果follower发现自己的日志长度大于后选择的就会投反对票
+- 2、选举过程，当一个leader长时间没有应答时，所有的follower都可以成为candidate，向其他follower节点发送投票请求，如果超过半数follower节点应答后这个candidate就会升级为leader,为了避免所有的follower节点已经作为candidate发起投票，引入随机超时机制，每个follower和leader的超时时间在一定范围内随机，当candidate发起投票没有结果时，随机等待一定时间。
 
-4.日志补齐，当leader发生故障的时候，各个follower上的状态不一样，所以新leader产生后需要补齐所有follow的日志，而且新leander的日志也不一定是最长的，但是foller日志上面没有的日志肯定是未提交的，这个时候补齐就可以
+- 3.candidate的日志长度要大于等于半数follower节点的日志才能成为leader,所以发起投票的时候如果follower发现自己的日志长度大于后选择的就会投反对票
 
-5.老leader复活，每一次选举到下一次选举的时间称为一个term任期，每一个任期内都会维护一个数字并自增，当leader发送复制请求的时候会带上term编号，如果follower发现term比自己小就拒绝，
+- 4.日志补齐，当leader发生故障的时候，各个follower上的状态不一样，所以新leader产生后需要补齐所有follow的日志，而且新leander的日志也不一定是最长的，但是foller日志上面没有的日志肯定是未提交的，这个时候补齐就可以
 
+- 5.老leader复活，每一次选举到下一次选举的时间称为一个term任期，每一个任期内都会维护一个数字并自增，当leader发送复制请求的时候会带上term编号，如果follower发现term比自己小就拒绝，
 
-raft设计中只有两个rpc请求，一个选举，一个复制日志，复制日志顺便做了心跳检测，当没有日志复制的时候发送空日志，
+![](https://pigpdong.github.io/assets/images/2019/distransaction/raft.png)
 
-
-触发选举的唯一条件是 election timeout到期，每一个节点的 election timeout都会将自己设置为candidate然后发起投票，每个节点的election timeout都会存在一个随机值，所以不同，当一个节点被选为leader后会定期向所有的follower发送心跳包，follower收到心跳包后会延长election timeout的值。
-
-节点选举的时候term值大的会优先于term值小的，每一轮选举term值都会加1
+> raft设计中只有两个rpc请求，一个选举，一个复制日志，复制日志顺便做了心跳检测，当没有日志复制的时候发送空日志，触发选举的唯一条件是 election timeout到期，每一个节点的 election timeout都会将自己设置为candidate然后发起投票，每个节点的election timeout都会存在一个随机值，所以不同，当一个节点被选为leader后会定期向所有的follower发送心跳包，follower收到心跳包后会延长election timeout的值。节点选举的时候term值大的会优先于term值小的，每一轮选举term值都会加1.
