@@ -1,6 +1,6 @@
 ---
 layout:     post
-title:    轻松构建微服务之单机事物
+title:    轻松构建微服务之单机事物和mysql锁
 no-post-nav: true
 category: other
 tags: [arch]
