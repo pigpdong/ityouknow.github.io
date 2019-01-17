@@ -248,48 +248,151 @@ java中的线程有以下几种状态
 
 ### 线程池
 
-### ScheduledExecutorService
+首先,我们需要明确,创建一个线程是需要进行系统调用的,开销很大,所以我们会使用对象池技术,将创建的线程放在一个池子里循环使用.而jdk已经帮我们封装好了 ThreadPoolExecutor,这里我们先关注下他的构造方法
 
-### future
+- 核心线程数
+- 最大线程数
+- 等待队列,一般设置为有界的阻塞队列
+- 空闲时间 非核心线程空闲时间,超过这个时间,这个线程将会从池子里释放
+- 线程工厂 设置后,这个池子创建线程都会用这个工厂,可以定制线程名称,优先级,和组
+- 拒绝策略 当新进来的任务,如果核心线程数已满,就会看是否达到最大线程数,如果没有就增加线程,如果已经达到就放到阻塞队列里,如果阻塞队列已经满就会执行拒绝策略,拒绝策略可以继续阻塞等待,因为正常情况下使用的是offer,如果返回false就会进入拒绝策略,拒绝策略可以用put阻塞
 
-### Lock
+我们可以设置核心线程在空闲的时候也可以释放线程,这样可以针对一些固定JOB一天只执行一次的情况,shutdown方法执行后线程池将不能继续提交任务.
 
-### condition
+ScheduledExecutorService对象可以用来在一定周期定时执行任务,或者间隔一定时间后执行任务.
+
+CompleteService 对象可以等待任务执行的结果,其实现是通过提交的时候将任务封装成一个callable,并在返回的future中的done中将完成的future放到一个阻塞队列里,这样用户每次取已经完成的future的时候就从阻塞队列里取,如果队列为空就会阻塞
+
+Future对象用来封装线程的处理结果,线程池执行后都会返回一个future对象,future对象的get方法是阻塞的,直到任务处理完成或者抛出异常,future对象可以将完成的结果和线程抛出的异常放在future里面,如果线程执行的时候抛出异常,get也会抛出来.
+
+
+### Lock/condition
+
+Lock和condition都是用AQS实现,AQS的实现比较复杂,我们简单看下Lock提供的方法
+
+- ReentrantLock 可重入锁,排他锁.
+- ReentrantReadWriteLock 读写锁,读的时候加读锁,写的时候加写锁,读读不互斥,读写,写写互斥.
+- lock提供了tryLock()方法可以判断能否加锁成功
+- lockInterruptibly() 运行线程在没有获取到锁等待期间,其他线程调用thread.interrupt()进行中断,然后抛出IntrruptedException,而lock()方法即使检测到其他线程中断还是会继续等待获取锁.
+- condition提供了某个条件阻塞和唤醒的功能,阻塞情况下提供了允许中断和不允许中断两种
+
 
 ### Atomic
 
+采用底层的CAS原子操作,先比较在更新,提供了java基础类型和引用类型的CAS操作,当修改引用对象里面属性的值时候不生效,底层使用了Unsafe对象里的方法,使用的时候需要先获取对象里面value字段对应对象其实地址的偏移量,
+
+```
+  static {
+        try {
+            valueOffset = unsafe.objectFieldOffset
+                (AtomicInteger.class.getDeclaredField("value"));
+        } catch (Exception ex) { throw new Error(ex); }
+    }
+
+    private volatile int value;
+
+
+    public final int getAndSet(int newValue) {
+        return unsafe.getAndSetInt(this, valueOffset, newValue);
+    }
+
+
+    public final boolean compareAndSet(int expect, int update) {
+        return unsafe.compareAndSwapInt(this, valueOffset, expect, update);
+    }
+
+```
+
 ### LockSupport
 
-### CountDownLatch
+主要用来做线程的阻塞和线程的取消阻塞,并设置下是哪个对象阻塞的这个线程
 
-### Semaphore
+```
+ private static final long parkBlockerOffset;
+ static {
+        try {
+            UNSAFE = sun.misc.Unsafe.getUnsafe();
+            Class<?> tk = Thread.class;
+            parkBlockerOffset = UNSAFE.objectFieldOffset
+                (tk.getDeclaredField("parkBlocker"));
+          } catch (Exception ex) { throw new Error(ex); }
+  }
 
-### 阻塞队列
+   private static void setBlocker(Thread t, Object arg) {
+          // Even though volatile, hotspot doesn't need a write barrier here.
+          UNSAFE.putObject(t, parkBlockerOffset, arg);
+      }
 
-### 线程安全的集合
+
+      public static void unpark(Thread thread) {
+          if (thread != null)
+              UNSAFE.unpark(thread);
+      }
+
+
+      public static void park(Object blocker) {
+          Thread t = Thread.currentThread();
+          setBlocker(t, blocker);
+          UNSAFE.park(false, 0L);
+          setBlocker(t, null);
+      }
+
+
+      public static void parkNanos(Object blocker, long nanos) {
+          if (nanos > 0) {
+              Thread t = Thread.currentThread();
+              setBlocker(t, blocker);
+              UNSAFE.park(false, nanos);
+              setBlocker(t, null);
+          }
+      }
+
+
+      public static void parkUntil(Object blocker, long deadline) {
+          Thread t = Thread.currentThread();
+          setBlocker(t, blocker);
+          UNSAFE.park(true, deadline);
+          setBlocker(t, null);
+      }
+
+
+      public static Object getBlocker(Thread t) {
+          if (t == null)
+              throw new NullPointerException();
+          return UNSAFE.getObjectVolatile(t, parkBlockerOffset);
+      }
+
+
+      public static void park() {
+          UNSAFE.park(false, 0L);
+      }
+
+
+```
+
+ - 设置和获取阻塞线程的对象,是哪个对象阻塞了线程,通过unsafe方法根据属性在内存中相对对象其实地址的偏移量,来设置和获取这个值,这个属性是thread对象的成员变量,由于线程已经阻塞,所以只能采用这种方式设置和获取
+
+ - 阻塞和唤醒线程,通过一个许可的信号量0或者1实现,线程间不在需要一个额外的oject来存储锁的状态
+
+### 并发工具
+
+- CountDownLatch 一个计数器实现的线程并发协同工具,当一个线程依赖其他N个线程执行结束后才能继续执行,那么可以new 一个CountDownLatch对象,构造参数传N,之后就开始await() ,而其他N个线程完成后都调用countdown()来使计数器减1,等减到0的时候主线程就可以从await恢复
+
+- Semaphore 信号量,用来控制同一个时刻只有N个线程运行,大于N个的线程将会阻塞,直到其他线程结束,新的线程才能唤醒
+
+- 阻塞队列 用于实现生产者消费者模式,线程池中就是用阻塞队列来缓存排队的任务,如果队列为空则消费取数据会被阻塞,如果队列已经满则生产放入元素阻塞,采用两把条件锁实现.
+
+- concurrenthashmap 线程安全的map,内部采用分段锁
+
+- copyOnWriteArray 写的时候先将数组调用本地的System.arrayCopy()方法进行拷贝,在新数组写入,在替换掉原来的数组,读的时候直接读取老的数组,读不加锁,写加排他锁.
+
 
 ### RingBuffer
 
-### Disruptor
+
+主要用到了CAS的无锁原子操作
 
 
-并发
-CAS 无锁队列
 
 
-waiting是线程主动调用object.wait，sleep,join,等待某一个事情结束，例如等待object.notify等,sleep不会释放自己持有的锁，而wait会释放对象锁，join是通过thread对象的wait方法，然后等线程执行结束会执行notifyall
-runnning状态的线程调用yield会变成runnable可以运行，
 
-
-wait和notify必须在synchronized语句块内，这三个操作必须针对的是同一个对象的监视器，wait之后其他线程可以进入同步块，因为wait会释放监视器，如果某代码不持有对象监视器直接调用wait则会报错IllegalMonitorStateException,这个异常经常出现在synchronized语句块内去调用另外一个对象的wait方法
-
-
-volatile变量：在处理线程的时候每次都要从主内存load到工作线程，让后写入工作线程，过一段时间在save到主内存，而volatile修饰的变量每次修改都会先从主内存load写入工作内存后立即save到主内存
-
-thread.intrrupt（）只是修改了一个状态标示，而这个标示只有在wait sleep状态，可以用 thread.interrupted()循环判断来退出，
-
-
-Atomic相关类采用Unsafe里面的方法来根据字段在对象中得偏移量来设置值的方法，cas操作来保证原子，但是 AtomicReference可能出现对象地址相同但是属性对象不同
-
-juc里面提供的lock，比synchronized更灵活，同步块要后加的锁先释放，而lock没有锁的释放的顺序要求，而lock还提供了trylock等无阻塞的方式，等待，以及课中断等，性能也更高，
-lock和lockInterruptily区别是 线程a获取到锁后，如果线程B通过r.lockInterruptily()去获取锁，由于A还没有释放，所以B只能block等待，但是线程B此时可以调用inerrupt方法中断，退出阻塞不在争抢资源
